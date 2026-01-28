@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoqueTech Planner | Pedagogia + IA</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #6366f1;
+            --success: #10b981;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #1e293b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 25px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .panel {
+            background: var(--card);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            height: fit-content;
+        }
+
+        h1, h2 { color: var(--primary); margin-top: 0; }
+        p { font-size: 0.9rem; color: #64748b; margin-bottom: 20px; }
+
+        .input-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem; }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        input:focus { border-color: var(--primary); ring: 2px var(--primary); }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .btn-generate { background: var(--primary); color: white; }
+        .btn-generate:hover { background: #4f46e5; transform: translateY(-2px); }
+
+        .btn-pdf { background: var(--success); color: white; display: none; }
+        .btn-pdf:hover { background: #059669; }
+
+        /* Estilização do Plano Gerado */
+        #output {
+            background: #fafafa;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            line-height: 1.6;
+            min-height: 300px;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        @media (max-width: 850px) {
+            .dashboard { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <aside class="panel">
+        <h1>EdTech Planner</h1>
+        <p>Unindo Pedagogia e Tecnologia para Internet.</p>
+        
+        <div class="input-group">
+            <label>Tema da Aula</label>
+            <input type="text" id="tema" placeholder="Ex: Sistemas Digestório">
+        </div>
+
+        <div class="input-group">
+            <label>Segmento</label>
+            <select id="serie">
+                <option value="Ensino Fundamental I">Ensino Fundamental I</option>
+                <option value="Ensino Fundamental II">Ensino Fundamental II</option>
+                <option value="Ensino Médio">Ensino Médio</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>Metodologia</label>
+            <select id="metodo">
+                <option value="Ativa e Gamificada">Metodologia Ativa</option>
+                <option value="Expositiva e Tradicional">Tradicional</option>
+                <option value="Sala de Aula Invertida">Sala de Aula Invertida</option>
+            </select>
+        </div>
+
+        <button class="btn-generate" onclick="gerarPlano()">Gerar Plano de Aula ✨</button>
+        <button id="btnPDF" class="btn-pdf" onclick="baixarPDF()">Baixar Plano em PDF 📥</button>
+    </aside>
+
+    <main class="panel">
+        <h2>Visualização do Plano</h2>
+        <div id="loader" class="loader">🧠 Processando diretrizes da BNCC...</div>
+        <div id="output">O plano estruturado aparecerá aqui.</div>
+    </main>
+</div>
+
+<script type="module">
+    import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+
+    // INSIRA SUA CHAVE AQUI
+    const API_KEY = "SUA_CHAVE_AQUI"; 
+    const genAI = new GoogleGenerativeAI(API_KEY);
+
+    window.gerarPlano = async function() {
+        const tema = document.getElementById('tema').value;
+        const serie = document.getElementById('serie').value;
+        const metodo = document.getElementById('metodo').value;
+        const output = document.getElementById('output');
+        const loader = document.getElementById('loader');
+        const btnPDF = document.getElementById('btnPDF');
+
+        if(!tema) {
+            alert("Por favor, digite um tema!");
+            return;
+        }
+
+        // Estado de Carregamento
+        output.style.display = 'none';
+        btnPDF.style.display = 'none';
+        loader.style.display = 'block';
+
+        try {
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+            const prompt = `Aja como um designer instrucional sênior. 
+            Crie um plano de aula completo para o ${serie} sobre o tema "${tema}".
+            Metodologia solicitada: ${metodo}.
+            
+            ESTRUTURA OBRIGATÓRIA:
+            1. OBJETIVOS: Use Taxonomia de Bloom.
+            2. BNCC: Liste códigos de habilidades (ex: EF06CI06).
+            3. DESENVOLVIMENTO: Passo a passo cronometrado.
+            4. RECURSOS DIGITAIS: Sugira ferramentas de tecnologia para internet.
+            5. AVALIAÇÃO: Formativa.
+            
+            Formate o texto com HTML básico (use <h3> para títulos e <ul> para listas).`;
+
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const text = response.text();
+
+            loader.style.display = 'none';
+            output.style.display = 'block';
+            output.innerHTML = text; // A IA retornará o HTML formatado
+            btnPDF.style.display = 'block';
+
+        } catch (error) {
+            console.error(error);
+            loader.innerText = "Erro: Verifique sua chave API ou conexão.";
+        }
+    }
+
+    window.baixarPDF = function() {
+        const elemento = document.getElementById('output');
+        const tema = document.getElementById('tema').value;
+        
+        const opcoes = {
+            margin: 15,
+            filename: `Plano_de_Aula_${tema}.pdf`,
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opcoes).from(elemento).save();
+    }
+</script>
+
+</body>
+</html>
